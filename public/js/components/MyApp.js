@@ -66,7 +66,7 @@ var MyApp = {
                       error: this.state.error
                   }),
                   cE(rB.Panel, {
-                      header: cE(rB.Grid, null,
+                      header: cE(rB.Grid, {fluid: true},
                                  cE(rB.Row, null,
                                     cE(rB.Col, {sm:1, xs:1},
                                        cE(AppStatus, {
@@ -91,7 +91,7 @@ var MyApp = {
                                    )
                                 )
                   }, cE(rB.Panel, {header: "Break Things!"},
-                        cE(rB.Grid, null,
+                        cE(rB.Grid, {fluid: true},
                            cE(rB.Row, null,
                               cE(rB.Col, { xs:12, sm:3},
                                  cE(rB.Button, {onClick: this.doBuy,
@@ -113,7 +113,7 @@ var MyApp = {
                        ),
                      cE(rB.Panel, {
                          header: 'Client Session'
-                     }, cE(rB.Grid, null,
+                     }, cE(rB.Grid, {fluid: true},
                            cE(rB.Row, null,
                               cE(rB.Col, {xs:6, sm:3},
                                  cE(rB.Input, {
