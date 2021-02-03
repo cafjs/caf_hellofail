@@ -1,12 +1,16 @@
-var React = require('react');
-var rB = require('react-bootstrap');
-var cE = React.createElement;
+const React = require('react');
+const rB = require('react-bootstrap');
+const cE = React.createElement;
 
-var AppStatus = {
-    render : function() {
-        var color = (this.props.isClosed ? 'text-danger' : 'text-success');
+class AppStatus extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+
+    render() {
+        const color = (this.props.isClosed ? 'text-danger' : 'text-success');
         return cE(rB.Glyphicon, {glyph: 'heart', className: color});
     }
 };
 
-module.exports = React.createClass(AppStatus);
+module.exports = AppStatus;

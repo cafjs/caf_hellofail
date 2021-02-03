@@ -1,12 +1,20 @@
-var React = require('react');
-var rB = require('react-bootstrap');
-var cE = React.createElement;
+'use strict';
 
-var ShoppingList = {
-    render: function() {
-        var counters = this.props.allCounters[this.props.defaultSession] || {};
+const React = require('react');
+const rB = require('react-bootstrap');
+const cE = React.createElement;
+
+class ShoppingList extends React.Component {
+
+    constructor(props) {
+        super(props);
+    }
+
+    render() {
+        const counters = this.props.allCounters &&
+              this.props.allCounters[this.props.defaultSession] || {};
         delete counters.next;
-        var keys = Object.keys(counters).sort();
+        const keys = Object.keys(counters).sort();
         return cE(rB.Table, {striped: true, responsive: true, bordered: true,
                              condensed: true, hover: true},
                   cE('thead', {key:0},
@@ -15,15 +23,16 @@ var ShoppingList = {
                         cE('th', {key:3}, 'Count')
                        )
                     ),
-                  cE('tbody', {key:8}, keys.map(function(x, i) {
-                      return cE('tr', {key:10*i +1000},
-                                cE('td', {key:10*i+1001}, x),
-                                cE('td', {key:10*i+1002}, counters[x])
-                               );
-                  }))
+                  cE('tbody', {key:8},
+                     keys.map((x, i) =>
+                              cE('tr', {key:10*i +1000},
+                                 cE('td', {key:10*i+1001}, x),
+                                 cE('td', {key:10*i+1002}, counters[x])
+                                )
+                             )
+                    )
                  );
     }
 };
 
-
-module.exports = React.createClass(ShoppingList);
+module.exports = ShoppingList;

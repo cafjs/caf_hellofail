@@ -1,7 +1,7 @@
 {
   "name": "caf_hellofail",
   "description": "Cloud Assistants with failure recovery example",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": "Antonio Lain <antlai@cafjs.com>",
     "license": "Apache-2.0",
   "dependencies": {
@@ -10,12 +10,11 @@
       "caf_transport" : "^0.4.0",
       "caf_components" : "^0.4.0",
       "caf_cli": "^0.4.0",
-      "react" : "^0.14.0",
-      "react-dom" : "^0.14.0",
-      "react-bootstrap" : "^0.28.1",
-      "flux": "^2.0.2",
-      "keymirror": "^0.1.0",
-      "eventemitter2" : "^0.4.14"
+      "react" : "^16.6.0",
+      "react-dom" : "^16.6.0",
+      "react-bootstrap" : "^0.32.4",
+      "redux": "^3.7.2",
+      "keymirror": "^0.1.0"
    },
     "devDependencies": {
         "nodeunit" : ">=0.9",
@@ -25,10 +24,8 @@
     "scripts": {
        "start" : "node ./index.js",
         "test": "node ./node_modules/.bin/nodeunit",
-        "build-js" : "browserify  -d public/js/main.js -o public/js/build.js",
-        "build-min-js" : "export NODE_ENV=production; browserify public/js/main.js | uglifyjs > public/js/build.min.js",
-        "build": "yarn run build-js && yarn run build-min-js"
+        "build": "./bin/build.sh"
     },
    "main": "index",
-  "engines": { "node": ">= 8.0.0" }
+  "engines": { "node": ">= 10.0.0" }
 }

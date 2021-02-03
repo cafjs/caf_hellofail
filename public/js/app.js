@@ -1,33 +1,36 @@
+"use strict";
 
-var React = require('react');
-var ReactDOM = require('react-dom');
-var ReactServer = require('react-dom/server');
-var AppSession = require('./session/AppSession');
-var MyApp = require('./components/MyApp');
-var AppActions = require('./actions/AppActions');
+const React = require('react');
+const ReactDOM = require('react-dom');
+const ReactServer = require('react-dom/server');
+const AppSession = require('./session/AppSession');
+const MyApp = require('./components/MyApp');
+const redux = require('redux');
+const AppReducer = require('./reducers/AppReducer');
+const AppActions = require('./actions/AppActions');
 
-var cE = React.createElement;
+const cE = React.createElement;
 
-AppSession.onopen = function() {
-    console.log('open session');
-    AppActions.init(function(err) {
-        console.log('Cannot connect:' + err);
-        // render error or real data
-        ReactDOM.render(
-            cE(MyApp, null),
-            document.getElementById('content')
-        );
-    });
-};
+const main = exports.main = function(data) {
+    const ctx =  {
+        store: redux.createStore(AppReducer)
+    };
 
-
-var main = exports.main = function(data) {
-    if (typeof window === 'undefined') {
-        // server side rendering
-        AppActions.initServer(data);
-        return ReactServer.renderToString(cE(MyApp, null));
+    if (typeof window !== 'undefined') {
+        return (async function() {
+            try {
+                await AppSession.connect(ctx);
+                ReactDOM.hydrate(cE(MyApp, {ctx: ctx}),
+                                 document.getElementById('content'));
+            } catch (err) {
+                document.getElementById('content').innerHTML =
+                    '<H1>Cannot connect: ' + err + '<H1/>';
+                console.log('Cannot connect:' + err);
+            }
+        })();
     } else {
-        console.log('Hello');
-        return null;
+        // server side rendering
+        AppActions.initServer(ctx, data);
+        return ReactServer.renderToString(cE(MyApp, {ctx: ctx}));
     }
 };

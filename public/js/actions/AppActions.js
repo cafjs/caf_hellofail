@@ -1,46 +1,56 @@
-var AppDispatcher = require('../dispatcher/AppDispatcher');
-var AppConstants = require('../constants/AppConstants');
-var AppSession = require('../session/AppSession');
-var caf_cli =  require('caf_cli');
-var caf_components = require('caf_components');
-var myUtils = caf_components.myUtils;
-var async = caf_components.async;
+const AppConstants = require('../constants/AppConstants');
+const json_rpc = require('caf_transport').json_rpc;
+const caf_components = require('caf_components');
+const myUtils = caf_components.myUtils;
+const async = caf_components.async;
 
-var ITEMS = [ 'camera', 'coat', 'flowers', 'hat', 'shirt', 'shoes'];
+const ITEMS = [ 'camera', 'coat', 'flowers', 'hat', 'shirt', 'shoes'];
 
-var DELAY = 1000;
+const DELAY = 1000;
 
-var updateF = function(state) {
-    var d = {
-        actionType: AppConstants.APP_UPDATE,
+const updateF = function(store, state) {
+    const d = {
+        type: AppConstants.APP_UPDATE,
         state: state
     };
-    AppDispatcher.dispatch(d);
+    store.dispatch(d);
 };
 
-
-var errorF =  function(err) {
-    var d = {
-        actionType: AppConstants.APP_ERROR,
+const errorF =  function(store, err) {
+    const d = {
+        type: AppConstants.APP_ERROR,
         error: err
     };
-    AppDispatcher.dispatch(d);
+    store.dispatch(d);
 };
 
-var wsStatusF =  function(isClosed) {
-    var d = {
-        actionType: AppConstants.WS_STATUS,
+const notifyF = function(store, message) {
+    const getNotifData = function(msg) {
+        return json_rpc.getMethodArgs(msg)[0];
+    };
+    const d = {
+        type: AppConstants.APP_NOTIFICATION,
+        state: getNotifData(message)
+    };
+    store.dispatch(d);
+};
+
+const wsStatusF =  function(store, isClosed) {
+    const d = {
+        type: AppConstants.WS_STATUS,
         isClosed: isClosed
     };
-    AppDispatcher.dispatch(d);
+    store.dispatch(d);
 };
 
-var buyQueue = async.queue(function(justFinish, cb) {
+
+const buyQueue = async.queue(function({ctx, justFinish}, cb) {
     var startIndex = 0;
     var nonce = null;
+    // TO DO: clean up using async/await instead of callbacks
     async.series([
         function(cb1) {
-            AppSession.begin(function(err, data) {
+            ctx.session.begin(function(err, data) {
                 if (err) {
                     cb1(err);
                 } else {
@@ -59,78 +69,74 @@ var buyQueue = async.queue(function(justFinish, cb) {
                 async.forEachOfSeries(ITEMS.slice(startIndex), function(x, i,
                                                                         cb2) {
                     setTimeout(function() {
-                        AppSession.buy(nonce, i + startIndex, x, cb2);
-                        AppActions.getState();
+                        ctx.session.buy(nonce, i + startIndex, x, cb2);
+                        AppActions.getState(ctx);
                     }, DELAY);
                 }, cb1);
             }
         },
         function(cb1) {
-            AppSession.end(nonce, cb1);
+            ctx.session.end(nonce, cb1);
         }
     ], cb);
 }, 1); // serialized
 
-var AppActions = {
-    initServer: function(initialData) {
-        updateF(myUtils.deepClone(initialData));
+const AppActions = {
+    initServer(ctx, initialData) {
+        updateF(ctx.store, myUtils.deepClone(initialData));
     },
-    init: function(cb) {
-        AppSession.hello(AppSession.getCacheKey(),
-                         function(err, data) {
-                             if (err) {
-                                 errorF(err);
-                             } else {
-                                 updateF(data);
-                                 AppActions.buy(true);
-                             }
-                             cb(err, data);
-                         });
+    async init(ctx) {
+        try {
+            const data = await ctx.session.hello(ctx.session.getCacheKey())
+                    .getPromise();
+            updateF(ctx.store, data);
+            AppActions.buy(ctx, true);
+        } catch (err) {
+            errorF(ctx.store, err);
+        }
     },
-    setLocalState: function(data) {
-        updateF(data);
+    message(ctx, msg) {
+        console.log('message:' + JSON.stringify(msg));
+        notifyF(ctx.store, msg);
     },
-    resetError: function() {
-        errorF(null);
+    closing(ctx, err) {
+        console.log('Closing:' + JSON.stringify(err));
+        wsStatusF(ctx.store, true);
     },
-    setError: function(err) {
-        errorF(err);
+    setLocalState(ctx, data) {
+        updateF(ctx.store, data);
     },
-    buy: function(justFinish) {
-        var self = this;
-        buyQueue.push(justFinish, function(err) {
+    resetError(ctx) {
+        errorF(ctx.store, null);
+    },
+    setError(ctx, err) {
+        errorF(ctx.store, err);
+    },
+    buy(ctx, justFinish) {
+        buyQueue.push({ctx, justFinish}, (err) => {
             if (err) {
                 console.log(myUtils.errToPrettyStr(err));
-                self.setError(err);
+                AppActions.setError(ctx, err);
             }
         });
+    },
+    crashClient(ctx) {
+        window.location.replace('crash.html');
     }
 };
 
-['crash', 'setDefaultSession', 'getState']
-    .forEach(function(x) {
-        AppActions[x] = async function() {
-            var args = Array.prototype.slice.call(arguments);
-            try {
-                var data = await AppSession[x].apply(AppSession, args)
-                        .getPromise();
-                updateF(data);
-            } catch (err) {
-                errorF(err);
-            }
-        };
-    });
-
-
-AppSession.onmessage = function(msg) {
-    console.log('message:' + JSON.stringify(msg));
-    AppActions.getState();
-};
-
-AppSession.onclose = function(err) {
-    console.log('Closing:' + JSON.stringify(err));
-    wsStatusF(true);
-};
-
+['crash', 'setDefaultSession', 'getState'].forEach(function(x) {
+    AppActions[x] = async function() {
+        const args = Array.prototype.slice.call(arguments);
+        const ctx = args.shift();
+        try {
+            const data = await ctx.session[x].apply(ctx.session, args)
+                  .getPromise();
+            updateF(ctx.store, data);
+        } catch (err) {
+            errorF(ctx.store, err);
+        }
+    };
+});
 
 module.exports = AppActions;
