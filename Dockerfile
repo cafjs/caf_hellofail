@@ -5,7 +5,7 @@
 # TO_BUILD:        cafjs mkImage . gcr.io/cafjs-k8/root-hellofail
 # TO_RUN:         cafjs run --appImage gcr.io/cafjs-k8/root-hellofail hellofail
 
-FROM node:16
+FROM node:18
 
 EXPOSE 3000
 
